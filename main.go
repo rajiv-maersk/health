@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 	"os"
-	""errors"
+	"errors"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
