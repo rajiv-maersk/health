@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: accesscontrol
+  namespace: default
+  labels:
+    app: accesscontrol
+spec:
+  serviceName: "accesscontrol"
+  replicas: 1  # Start with 1 for simplicity
+  selector:
+    matchLabels:
+      app: accesscontrol
+  template:
+    metadata:
+      labels:
+        app: accesscontrol
+    spec:
+      containers:
+        - name: accesscontrol
+          image: health:latest  # Correct image name
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - NET_RAW
+          env:
+          - name: PORT
+            value: "8082"  # Ensure this matches the port your app listens on
+          - name: GIN_MODE
+            value: "release"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "10m"
+            limits:
+              memory: "256Mi"
+              cpu: "40m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8082  # Match this to the port your app is listening on
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
