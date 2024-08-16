@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"os"
+	""errors"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -19,7 +20,7 @@ type HealthResponse struct {
 // CheckDatabaseStatus verifies if the database is accessible
 func CheckDatabaseStatus() error {
 	// Simulate a database check failure
-	return nil
+	return errors.New("database check failed")
 }
 
 func healthCheck(c *gin.Context) {
