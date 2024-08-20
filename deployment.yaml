@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: accesscontrol
-          image: health:latest  # Correct image name
+          image: ghcr.io/rajiv-maersk/health:main
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -39,8 +39,15 @@ spec:
               cpu: "40m"
           readinessProbe:
             httpGet:
-              path: /health
-              port: 8082  # Match this to the port your app is listening on
+              path: /readiness
+              port: 8082
             initialDelaySeconds: 5
             periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 8082
+            initialDelaySeconds: 15
+            periodSeconds: 20
             failureThreshold: 3

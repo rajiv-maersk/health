@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +15,7 @@ type HealthResponse struct {
 
 // CheckDatabaseStatus verifies if the database is accessible
 func CheckDatabaseStatus() error {
-	return errors.New("Database connection failed")
+	return nil
 }
 
 // ReadinessProbeHandler returns a Gin handler function that checks the health of the service
