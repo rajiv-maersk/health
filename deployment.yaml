@@ -27,7 +27,7 @@ spec:
               - NET_RAW
           env:
           - name: PORT
-            value: "8082"  # Ensure this matches the port your app listens on
+            value: "8080"  # Ensure this matches the port your app listens on
           - name: GIN_MODE
             value: "release"
           resources:
@@ -40,14 +40,14 @@ spec:
           readinessProbe:
             httpGet:
               path: /readiness
-              port: 8082
+              port: 8080
             initialDelaySeconds: 5
             periodSeconds: 10
             failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /liveness
-              port: 8082
+              port: 8080
             initialDelaySeconds: 15
             periodSeconds: 20
             failureThreshold: 3

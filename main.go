@@ -1,12 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"health/handlers"
 	"log"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
+
+var serviceName string = "accesscontrol"
 
 // conditionalLogger logs requests only if the status code is not 200
 func conditionalLogger() gin.HandlerFunc {
@@ -25,8 +28,6 @@ func conditionalLogger() gin.HandlerFunc {
 	}
 }
 
-var serviceName string = "accesscontrol"
-
 func main() {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
@@ -44,14 +45,14 @@ func main() {
 	// Liveness probe handler
 	router.GET("/liveness", handlers.LivenessProbeHandler(serviceName))
 
-	// Launch the server in a goroutine
 	go func() {
-		if err := router.Run("localhost:8082"); err != nil {
+		// To run in localhost
+		// router.Run("localhost:8080")
+		if err := router.Run(); err != nil {
 			// Handle error if server fails to start
 			logger.Error("Failed to start server", zap.Error(err))
 		}
 	}()
 
-	// Keep the main function running
-	select {}
+	fmt.Println("Server is running on port 8080")
 }
