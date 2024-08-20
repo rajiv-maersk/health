@@ -1,78 +1,57 @@
 package main
 
 import (
-	"net/http"
-	"os"
-	"errors"
+	"health/handlers"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
-// HealthResponse represents the structure of the health check response
-type HealthResponse struct {
-	Status       string            `json:"status"`
-	ServiceName  string            `json:"service_name"`
-	Dependencies map[string]string `json:"dependencies"`
-}
+// conditionalLogger logs requests only if the status code is not 200
+func conditionalLogger() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
 
-// CheckDatabaseStatus verifies if the database is accessible
-func CheckDatabaseStatus() error {
-	// Simulate a database check failure
-	return errors.New("database check failed")
-}
-
-func healthCheck(c *gin.Context) {
-	// Perform the health checks
-	response := HealthResponse{
-		Status:       "healthy",
-		ServiceName:  "accesscontrol",
-		Dependencies: make(map[string]string),
-	}
-
-	// Check Database status
-	databaseStatus := "healthy"
-	if err := CheckDatabaseStatus(); err != nil {
-		databaseStatus = "unhealthy: " + err.Error()
-		if response.Status != "unhealthy" {
-			response.Status = "unhealthy"
+		// Only log if the status code is not 200
+		if c.Writer.Status() != 200 {
+			log.Printf("[GIN] %s | %d | %s | %s",
+				c.ClientIP(),
+				c.Writer.Status(),
+				c.Request.Method,
+				c.Request.URL.Path,
+			)
 		}
-		zap.L().Error("Database status check failed", zap.Error(err))
-	}
-	response.Dependencies["Database"] = databaseStatus
-
-	// Set the appropriate HTTP status code based on overall health
-	if response.Status == "unhealthy" {
-		c.JSON(http.StatusInternalServerError, response) // 500 Internal Server Error
-	} else {
-		c.JSON(http.StatusOK, response) // 200 OK
 	}
 }
+
+var serviceName string = "accesscontrol"
 
 func main() {
-	// Initialize logger
-	logger := InitLogger()
-	defer logger.Sync() // Flush any buffered log entries
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
 
-	// Create a new Gin router
-	r := gin.Default()
+	// Set Gin mode to ReleaseMode for production
+	gin.SetMode(gin.ReleaseMode)
+	// Initialize Gin router without default middleware
+	router := gin.New()
 
-	// Define the health check endpoint
-	r.GET("/health", healthCheck)
+	// Add custom logging middleware
+	router.Use(conditionalLogger())
 
-	// Start the server
-	if err := r.Run(":8082"); err != nil {
-		logger.Fatal("Failed to start server", zap.Error(err))
-	}
-}
+	// Readiness probe handler
+	router.GET("/readiness", handlers.ReadinessProbeHandler(serviceName))
+	// Liveness probe handler
+	router.GET("/liveness", handlers.LivenessProbeHandler(serviceName))
 
-// InitLogger initializes a zap logger with a human-readable format
-func InitLogger() *zap.Logger {
-	config := zap.NewDevelopmentEncoderConfig()
-	config.EncodeTime = zapcore.ISO8601TimeEncoder
-	config.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	encoder := zapcore.NewConsoleEncoder(config)
-	core := zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), zapcore.DebugLevel)
-	return zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
+	// Launch the server in a goroutine
+	go func() {
+		if err := router.Run("localhost:8082"); err != nil {
+			// Handle error if server fails to start
+			logger.Error("Failed to start server", zap.Error(err))
+		}
+	}()
+
+	// Keep the main function running
+	select {}
 }
