@@ -47,12 +47,12 @@ func main() {
 
 	go func() {
 		// To run in localhost
-		// router.Run("localhost:8080")
+		//router.Run("localhost:8081")
 		if err := router.Run(); err != nil {
 			// Handle error if server fails to start
 			logger.Error("Failed to start server", zap.Error(err))
 		}
 	}()
-
-	fmt.Println("Server is running on port 8080")
+	fmt.Println("Server is running on localhost:8081")
+	select {}
 }
