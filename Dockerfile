@@ -5,6 +5,7 @@ FROM golang:alpine3.17
 WORKDIR /app
 
 COPY go.mod go.sum ./
+COPY handlers ./handlers
 RUN go mod download
 
 COPY *.go ./
