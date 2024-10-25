@@ -1,0 +1,61 @@
+# Workflow to onboard Users to Github Copilot
+
+name: Copilot User onboarding
+
+on:
+  workflow_dispatch:
+
+jobs:
+  onboarding:
+    runs-on: sh-ubuntu-latest
+    concurrency:
+      group: ${{ github.actor }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+          cache: 'pip'
+
+      - name: Install dependencies
+        env:
+          NEXUS_USER: ${{ secrets.MDN_NEXUS_READ_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.MDN_NEXUS_READ_PASSWORD }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -i "https://$NEXUS_USER:$NEXUS_PASSWORD@tools-nexus.maerskdev.net/repository/pypi-group-internal/simple" -r requirements.txt
+      
+      - name: Run onboarding
+        id: onboarding
+        env:
+          USER: ${{ github.actor }}
+          GITHUB_ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          COPILOT_LIMIT: "1500"
+          AZURE_CLIENT_ID: ${{ secrets.MAINSP_BB_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.MAINSP_BB_CLIENT_SECRET }}
+          SA_CONN_STR: ${{ secrets.SA_CONN_STR }}
+        run: |
+          python onboarding.py
+
+      - name: Update Summary
+        if: steps.onboarding.outputs.updated_waitlist != 'true'
+        run: |
+          echo ":green_circle: Successfully added ${{ github.actor }} to Co-pilot access" | tee -a ./summary.md
+          cat summary.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Warning Summary
+        if: steps.onboarding.outputs.updated_waitlist == 'true'
+        run: |
+          echo ":yellow_circle: Added ${{ github.actor }} to Co-pilot Waitlist" | tee -a ./summary.md
+          cat summary.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail Summary
+        if: failure()
+        run: |
+          echo ":red_circle: Failed to add ${{ github.actor }} for co-pilot access, Tools Engineering checking..." | tee -a ./summary.md
+          cat summary.md >> $GITHUB_STEP_SUMMARY
